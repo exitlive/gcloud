@@ -191,7 +191,7 @@ acknowledged when the consumer has processed it.
 
 ```dart
 var subscription =
-    await pubsub.createSubscription('my-subscription', 'my-topic);
+    await pubsub.createSubscription('my-subscription', 'my-topic');
 var pullEvent = await subscription.pull();
 print(pullEvent.message.asString);
 await pullEvent.acknowledge()
