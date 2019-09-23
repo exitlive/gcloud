@@ -146,6 +146,10 @@ var persons = (await db.query<Person>().run()).toList();
 To fetch one or multiple existing entities, use `lookup`.
 
 ```dart
+var key = new Person()
+    ..name = 'UniqueName'
+    ..age = 42
+    ..parentKey = db.emptyKey;
 var person = (await db.lookup<Person>([key])).single;
 var people = await db.lookup<Person>([key1, key2]);
 ```
@@ -232,6 +236,12 @@ The value of the environment variable `GCLOUD_E2E_TEST_PROJECT` is the name
 of the Google Cloud project to use. The value of the environment variable
 `GCLOUD_E2E_TEST_KEY` is a Google Cloud Storage path (starting with `gs://`)
 to a JSON key file for a service account providing access to the Cloud Project.
+
+You will also need to create indexes as follows:
+
+```bash
+gcloud --project "$GCLOUD_E2E_TEST_PROJECT" datastore indexes create test/index.yaml
+```
 
 [Datastore]: https://cloud.google.com/datastore/
 [GCS]: https://cloud.google.com/storage/

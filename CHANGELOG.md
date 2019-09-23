@@ -1,3 +1,32 @@
+## 0.6.3
+
+ * Added `DatastoreDB.lookupValue()`
+
+## 0.6.2
+
+ * Fixed bug in `Transaction.rollback()`.
+
+## 0.6.1
+
+ * Added examples.
+ * Fixed formatting and lints.
+ * Allow `Model` classes to contain constructors with optional or named
+   arguments (as long as they're annotated with `@required`).
+ * Add generics support to `withTransaction()`.
+
+## 0.6.0+4
+
+ * Updated package description.
+ * Added an example showing how to use Google Cloud Storage.
+
+## 0.6.0+3
+
+ * Fixed code formatting and lints.
+
+## 0.6.0+2
+
+* Support the latest `pkg:http`.
+
 ## 0.6.0+1
 
 * Add explicit dependency to `package:_discoveryapis_commons`

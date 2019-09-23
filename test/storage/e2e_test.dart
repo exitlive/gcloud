@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+@Tags(["e2e"])
+
 library gcloud.storage;
 
 import 'dart:async';
@@ -13,7 +15,7 @@ import 'package:test/test.dart';
 import '../common_e2e.dart';
 
 String generateBucketName() {
-  var id = new DateTime.now().millisecondsSinceEpoch;
+  var id = DateTime.now().millisecondsSinceEpoch;
   return 'dart-e2e-test-$id';
 }
 
@@ -24,7 +26,7 @@ const int MB = 1024 * 1024;
 const int maxNormalUpload = 1 * MB;
 const int minResumableUpload = maxNormalUpload + 1;
 final bytesResumableUpload =
-    new List<int>.generate(minResumableUpload, (e) => e & 255);
+    List<int>.generate(minResumableUpload, (e) => e & 255);
 
 void main() {
   Storage storage;
@@ -36,7 +38,7 @@ void main() {
       testBucketName = generateBucketName();
 
       // Share the same storage connection for all tests.
-      storage = new Storage(httpClient, project);
+      storage = Storage(httpClient, project);
 
       // Create a shared bucket for all object tests.
       return storage.createBucket(testBucketName).then((_) {
@@ -48,7 +50,7 @@ void main() {
   tearDownAll(() {
     // Deleting a bucket relies on eventually consistent behaviour, hence
     // the delay in attempt to prevent test flakiness.
-    return new Future.delayed(STORAGE_LIST_DELAY, () {
+    return Future.delayed(STORAGE_LIST_DELAY, () {
       return storage.deleteBucket(testBucketName);
     });
   });
@@ -70,32 +72,32 @@ void main() {
       }));
     });
 
-    test('create-with-predefined-acl-delete', () {
-      Future<Acl> test(PredefinedAcl predefinedAcl, expectedLength) {
+    test('create-with-predefined-acl-delete', () async {
+      final cases = <PredefinedAcl, int>{
+        // See documentation:
+        // https://cloud.google.com/storage/docs/access-control/lists
+        PredefinedAcl.authenticatedRead: 2,
+        PredefinedAcl.private: 1,
+        PredefinedAcl.projectPrivate: 3,
+        PredefinedAcl.publicRead: 2,
+        PredefinedAcl.publicReadWrite: 2,
+      };
+      for (var e in cases.entries) {
+        var predefinedAcl = e.key;
+        var expectedLength = e.value;
         var bucketName = generateBucketName();
-        return storage
-            .createBucket(bucketName, predefinedAcl: predefinedAcl)
-            .then(expectAsync1((result) {
-          expect(result, isNull);
-          return storage.bucketInfo(bucketName).then(expectAsync1((info) {
-            var acl = info.acl;
-            expect(info.bucketName, bucketName);
-            expect(acl.entries.length, expectedLength);
-            return storage.deleteBucket(bucketName).then(expectAsync1((result) {
-              expect(result, isNull);
-            }));
-          }));
-        }));
+        // Sleep for 2 seconds to avoid bucket request limit, see:
+        // https://cloud.google.com/storage/quotas#buckets
+        await Future.delayed(Duration(seconds: 2));
+        var r1 = await storage.createBucket(bucketName,
+            predefinedAcl: predefinedAcl);
+        expect(r1, isNull);
+        var info = await storage.bucketInfo(bucketName);
+        expect(info.bucketName, bucketName);
+        expect(info.acl.entries.length, expectedLength);
+        var r2 = await storage.deleteBucket(bucketName);
+        expect(r2, isNull);
       }
-
-      return Future.forEach([
-        // See documentation: https://cloud.google.com/storage/docs/access-control/lists
-        () => test(PredefinedAcl.authenticatedRead, 2),
-        () => test(PredefinedAcl.private, 1),
-        () => test(PredefinedAcl.projectPrivate, 3),
-        () => test(PredefinedAcl.publicRead, 2),
-        () => test(PredefinedAcl.publicReadWrite, 2),
-      ], (f) => f().then(expectAsync1((_) {})));
     });
 
     test('create-error', () {
@@ -187,26 +189,22 @@ void main() {
           }));
         }
 
-        Acl acl1 = new Acl(
-            [new AclEntry(AclScope.allAuthenticated, AclPermission.WRITE)]);
-        Acl acl2 = new Acl([
-          new AclEntry(AclScope.allUsers, AclPermission.WRITE),
-          new AclEntry(
-              new AccountScope('sgjesse@google.com'), AclPermission.WRITE)
+        Acl acl1 =
+            Acl([AclEntry(AclScope.allAuthenticated, AclPermission.WRITE)]);
+        Acl acl2 = Acl([
+          AclEntry(AclScope.allUsers, AclPermission.WRITE),
+          AclEntry(AccountScope('sgjesse@google.com'), AclPermission.WRITE)
         ]);
-        Acl acl3 = new Acl([
-          new AclEntry(AclScope.allUsers, AclPermission.WRITE),
-          new AclEntry(
-              new AccountScope('sgjesse@google.com'), AclPermission.WRITE),
-          new AclEntry(new GroupScope('misc@dartlang.org'), AclPermission.READ)
+        Acl acl3 = Acl([
+          AclEntry(AclScope.allUsers, AclPermission.WRITE),
+          AclEntry(AccountScope('sgjesse@google.com'), AclPermission.WRITE),
+          AclEntry(GroupScope('misc@dartlang.org'), AclPermission.READ)
         ]);
-        Acl acl4 = new Acl([
-          new AclEntry(AclScope.allUsers, AclPermission.WRITE),
-          new AclEntry(
-              new AccountScope('sgjesse@google.com'), AclPermission.WRITE),
-          new AclEntry(new GroupScope('misc@dartlang.org'), AclPermission.READ),
-          new AclEntry(
-              new DomainScope('dartlang.org'), AclPermission.FULL_CONTROL)
+        Acl acl4 = Acl([
+          AclEntry(AclScope.allUsers, AclPermission.WRITE),
+          AclEntry(AccountScope('sgjesse@google.com'), AclPermission.WRITE),
+          AclEntry(GroupScope('misc@dartlang.org'), AclPermission.READ),
+          AclEntry(DomainScope('dartlang.org'), AclPermission.FULL_CONTROL)
         ]);
 
         // The expected length of the returned ACL is one longer than the one
@@ -252,8 +250,8 @@ void main() {
           }));
         }
 
-        var metadata1 = new ObjectMetadata(contentType: 'text/plain');
-        var metadata2 = new ObjectMetadata(
+        var metadata1 = ObjectMetadata(contentType: 'text/plain');
+        var metadata2 = ObjectMetadata(
             contentType: 'text/plain',
             cacheControl: 'no-cache',
             contentDisposition: 'attachment; filename="test.txt"',
